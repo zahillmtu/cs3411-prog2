@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <getopt.h>
 
 #define FILENAME "example.mtu"
 
@@ -39,26 +41,60 @@ int checkMagicBytes (FILE *fp) {
 
 }
 
-int main (void) {
+int main (int argc, char* argv[]) {
 
-    int byteCheck;
+    int opt;
 
-    FILE *fp = fopen(FILENAME, "r");
-
-    // check for valid file open
-    if (fp == NULL) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
+    if (argc == 0) {
+        //print help stuff
+        printf("HELP STUFF\n");
     }
 
-    byteCheck = checkMagicBytes (fp);
+    // use to parse options on command line
+    opt = getopt(argc, argv, "a:d:x:");
 
-    if (byteCheck != 0) {
-        printf("Not a valid .mtu file - Exiting\n");
-        exit(1);
+    switch (opt) {
+        case('a'):
+
+            printf("This is the case 'a'\n");
+            break;
+        case('d'):
+
+            printf("This is the case 'd'\n");
+            break;
+        case('x'):
+            // check if the archive file exists
+            if (argv[2] == NULL) {
+                printf("Archive file does not exist - Exiting\n");
+                exit(1);
+            }
+            if (access(argv[2], R_OK) == 0) {
+                // File exists and can read
+                printf("File Exists\n");
+                FILE *fp = fopen(argv[2], "r");
+                if (checkMagicBytes(fp) == 0) {
+                    printf("Valid .mtu file\n");
+                }
+                else {
+                    printf("Not a valid .mtu file - Exiting\n");
+                    exit(1);
+                }
+            }
+            else {
+                // File does not exist
+                perror("access");
+                exit(1);
+            }
+            break;
+
+        case('?'): // Some option not expected from opt
+            // print help
+            break;
+
+        default:
+            //print help
+            break;
     }
-
-    printf("Vaild .mtu file\n");
 
     return 0;
 
@@ -68,4 +104,5 @@ int main (void) {
  * References
  *  http://stackoverflow.com/questions/579734/assigning-strings-to-arrays-of-characters
  *  http://www.programmingsimplified.com/c/program/print-string
+ *  http://www.thegeekstuff.com/2013/01/c-argc-argv/
  */
