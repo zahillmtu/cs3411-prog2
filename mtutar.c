@@ -19,6 +19,7 @@
 #include <getopt.h>
 
 #define FILENAME "example.mtu"
+#define READMAGIC 0
 
 int checkMagicBytes (FILE *fp) {
 
@@ -37,8 +38,58 @@ int checkMagicBytes (FILE *fp) {
     }
 
     // check to make sure the file is a valid using the magicBytes
+    READMAGIC = 1;
     return strcmp(magicBytes, magicCheck);
 
+}
+
+/*
+ * This method reads in the next 256 characters
+ * which is the max size of the name of the file
+ */
+void readName(FILE *fp) { // pass in a pointer or return an array??
+
+    readCheck = fread(some_var, sizeof(char), 256, fp);
+    if (readCheck < 1) {
+        printf("An error occured while reading - Exiting\n");
+        fclose(fp);
+        exit(1);
+    }
+
+    return;
+}
+
+/*
+ * This method reads in the next 8 bytes assumed
+ * to be the size of the file
+ */
+void readSize(FILE *fp) { // pass in a pointer or return an array??
+
+    readCheck = fread(some_var, sizeof(char), 256, fp);
+    if (readCheck < 1) {
+        printf("An error occured while reading - Exiting\n");
+        fclose(fp);
+        exit(1);
+    }
+
+    return;
+}
+
+/*
+ * This method reads in the next byte and determines
+ * if the byte says the file is to be deleted or stay
+ * Returns 1 if the file exists, 0 otherwise
+ */
+void readExists(FILE *fp) { // pass in a pointer or return an array??
+
+    readCheck = fread(some_var, sizeof(char), 256, fp);
+    if (readCheck < 1) {
+        printf("An error occured while reading - Exiting\n");
+        fclose(fp);
+        exit(1);
+    }
+
+    return;
 }
 
 int main (int argc, char* argv[]) {
@@ -89,10 +140,12 @@ int main (int argc, char* argv[]) {
 
         case('?'): // Some option not expected from opt
             // print help
+            printf("HELP STUFF\n");
             break;
 
         default:
-            //print help
+            // print help
+            printf("HELP STUFF\n");
             break;
     }
 
