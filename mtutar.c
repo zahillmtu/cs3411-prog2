@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <inttypes.h>
 
 #define FILENAME "example.mtu"
 
@@ -53,7 +54,7 @@ void readName(char name_var[static 265], FILE *fp) {
 
     int readCheck = 0;
 
-    readCheck = fread(&name_var, sizeof(char), 256, fp);
+    readCheck = fread(name_var, sizeof(char), 256, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -71,7 +72,7 @@ void readSize(uint64_t *size_var, FILE *fp) { // pass in a pointer or return an 
 
     int readCheck = 0;
 
-    readCheck = fread(&size_var, sizeof(char), 8, fp);
+    readCheck = fread(size_var, sizeof(char), 8, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -90,7 +91,7 @@ void readExists(uint8_t *exists_var, FILE *fp) { // pass in a pointer or return 
 
     int readCheck = 0;
 
-    readCheck = fread(&exists_var, sizeof(char), 1, fp);
+    readCheck = fread(exists_var, sizeof(char), 1, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -108,7 +109,7 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
 
     int readCheck = 0;
 
-    readCheck = fread(&mode_var, sizeof(char), 4, fp);
+    readCheck = fread(mode_var, sizeof(char), 4, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -122,7 +123,10 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
 int main (int argc, char* argv[]) {
 
     int opt;
+    // int readcheck = 0;
+    int extractIndex = 2;
     char fileName[256];
+    uint64_t fileSize;
 
     if (argc == 0) {
         //print help stuff
@@ -165,8 +169,19 @@ int main (int argc, char* argv[]) {
                         exit(1);
                     }
                 }
-                readName(fileName, fp);
-                printf("file name is: %s\n", fileName);
+                while (extractIndex < argc) { // change to know when at end of file
+
+                    readName(fileName, fp);
+                    printf("file name is: %s\n", fileName);
+                    readSize(&fileSize, fp);
+                    printf("File size is: %"PRIu64"\n", fileSize);
+
+                    // seek forward to skip reading the data
+                    fseek(fp, fileSize, SEEK_CUR);
+
+                    extractIndex = extractIndex + 1;
+
+                }
 
             }
             else {
