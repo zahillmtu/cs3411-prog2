@@ -19,7 +19,8 @@
 #include <getopt.h>
 
 #define FILENAME "example.mtu"
-#define READMAGIC 0
+
+int READMAGIC = 0;
 
 int checkMagicBytes (FILE *fp) {
 
@@ -27,6 +28,7 @@ int checkMagicBytes (FILE *fp) {
     char magicCheck[6] = "CS3411";
     char magicBytes[6];
 
+    printf("GOT TO THE MAGIC STUFF\n");
     readCheck = fread(&magicBytes, sizeof(char), 6, fp);
     printf("%s\n", magicBytes);
 
@@ -47,9 +49,11 @@ int checkMagicBytes (FILE *fp) {
  * This method reads in the next 256 characters
  * which is the max size of the name of the file
  */
-void readName(FILE *fp) { // pass in a pointer or return an array??
+void readName(char name_var[static 265], FILE *fp) {
 
-    readCheck = fread(some_var, sizeof(char), 256, fp);
+    int readCheck = 0;
+
+    readCheck = fread(&name_var, sizeof(char), 256, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -63,9 +67,11 @@ void readName(FILE *fp) { // pass in a pointer or return an array??
  * This method reads in the next 8 bytes assumed
  * to be the size of the file
  */
-void readSize(FILE *fp) { // pass in a pointer or return an array??
+void readSize(uint64_t *size_var, FILE *fp) { // pass in a pointer or return an array??
 
-    readCheck = fread(some_var, sizeof(char), 256, fp);
+    int readCheck = 0;
+
+    readCheck = fread(&size_var, sizeof(char), 8, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -80,9 +86,11 @@ void readSize(FILE *fp) { // pass in a pointer or return an array??
  * if the byte says the file is to be deleted or stay
  * Returns 1 if the file exists, 0 otherwise
  */
-void readExists(FILE *fp) { // pass in a pointer or return an array??
+void readExists(uint8_t *exists_var, FILE *fp) { // pass in a pointer or return an array??
 
-    readCheck = fread(some_var, sizeof(char), 256, fp);
+    int readCheck = 0;
+
+    readCheck = fread(&exists_var, sizeof(char), 1, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -92,9 +100,29 @@ void readExists(FILE *fp) { // pass in a pointer or return an array??
     return;
 }
 
+/*
+ * This method reads in the next 4 bytes that
+ * contain the mode_t data for the file
+ */
+void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an array??
+
+    int readCheck = 0;
+
+    readCheck = fread(&mode_var, sizeof(char), 4, fp);
+    if (readCheck < 1) {
+        printf("An error occured while reading - Exiting\n");
+        fclose(fp);
+        exit(1);
+    }
+
+    return;
+}
+
+
 int main (int argc, char* argv[]) {
 
     int opt;
+    char fileName[256];
 
     if (argc == 0) {
         //print help stuff
@@ -123,13 +151,23 @@ int main (int argc, char* argv[]) {
                 // File exists and can read
                 printf("File Exists\n");
                 FILE *fp = fopen(argv[2], "r");
-                if (checkMagicBytes(fp) == 0) {
-                    printf("Valid .mtu file\n");
-                }
-                else {
-                    printf("Not a valid .mtu file - Exiting\n");
+                if (fp == NULL) {
+                    perror("fopen");
                     exit(1);
                 }
+                printf("GOT HERE\n");
+                if (READMAGIC == 0) {
+                    if (checkMagicBytes(fp) == 0) {
+                        printf("Valid .mtu file\n");
+                    }
+                    else {
+                        printf("Not a valid .mtu file - Exiting\n");
+                        exit(1);
+                    }
+                }
+                readName(fileName, fp);
+                printf("file name is: %s\n", fileName);
+
             }
             else {
                 // File does not exist
@@ -158,4 +196,5 @@ int main (int argc, char* argv[]) {
  *  http://stackoverflow.com/questions/579734/assigning-strings-to-arrays-of-characters
  *  http://www.programmingsimplified.com/c/program/print-string
  *  http://www.thegeekstuff.com/2013/01/c-argc-argv/
+ *  http://stackoverflow.com/questions/5573310/difference-between-passing-array-and-array-pointer-into-function-in-c
  */
