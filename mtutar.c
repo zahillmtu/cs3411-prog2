@@ -124,9 +124,9 @@ int main (int argc, char* argv[]) {
 
     int opt;
     // int readcheck = 0;
-    int extractIndex = 2;
     char fileName[256];
     uint64_t fileSize;
+    int seekEnd = 0;
 
     if (argc == 0) {
         //print help stuff
@@ -159,6 +159,13 @@ int main (int argc, char* argv[]) {
                     perror("fopen");
                     exit(1);
                 }
+
+                // Seek to the end of file and store value to find EOF
+                fseek(fp, 0, SEEK_END);
+                seekEnd = ftell(fp);
+                // Return the cursor to the beginning of file
+                fseek(fp, 0, SEEK_SET);
+
                 printf("GOT HERE\n");
                 if (READMAGIC == 0) {
                     if (checkMagicBytes(fp) == 0) {
@@ -169,17 +176,17 @@ int main (int argc, char* argv[]) {
                         exit(1);
                     }
                 }
-                while (extractIndex < argc) { // change to know when at end of file
+
+                while (ftell(fp) < seekEnd) { // seekEnd contains EOF position
 
                     readName(fileName, fp);
                     printf("file name is: %s\n", fileName);
                     readSize(&fileSize, fp);
                     printf("File size is: %"PRIu64"\n", fileSize);
 
-                    // seek forward to skip reading the data
-                    fseek(fp, fileSize, SEEK_CUR);
-
-                    extractIndex = extractIndex + 1;
+                    // seek forward to skip reading the data - TEMPORARY
+                    // remember to skip extra five for deleted and mode
+                    fseek(fp, fileSize + 5, SEEK_CUR);
 
                 }
 
