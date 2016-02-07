@@ -18,11 +18,9 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <inttypes.h>
-
-#define FILENAME "example.mtu"
+#include <sys/stat.h>
 
 int READMAGIC = 0;
-char *fileContents;
 
 int checkMagicBytes (FILE *fp) {
 
@@ -124,11 +122,13 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
  * Method to extract the next file, if the file already exists, then the program
  * should prompt to overwrite. Expects that the file is to be extracted
  */
-void extractFile(char name_var[static 256], uint64_t size_var, FILE *fp) {
+void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mode, FILE *fp) {
 
     int readCheck;
     char contents[size_var];
     FILE * extracted_fp;
+    char userAns;
+    char secondChar;
 
     // Read in the contents of the file
     readCheck = fread(contents, sizeof(char), size_var, fp);
@@ -140,16 +140,47 @@ void extractFile(char name_var[static 256], uint64_t size_var, FILE *fp) {
 
 
     printf("OPENING FILE\n");
-    // Create the destination to extract the file
-    extracted_fp = fopen(name_var, "w");
+
+    // Check if the file exists
+    if (access(name_var, F_OK) == 0) {
+
+        // File exists, ask to overwrite
+        printf("File '%s' exists. Overwite it? [y/n]\n", name_var);
+
+        // flush stdin so that a newline char is not picked up
+        fseek(stdin, 0, SEEK_END);
+        // Read in user input
+        userAns = getchar();
+
+        // Read in second char to make sure that there is only one char
+        secondChar = getchar();
+        if (secondChar != '\n') {
+            return;
+        }
+
+        if (userAns == 'y' || userAns == 'Y') {
+            // Overwrite the file
+            printf("Overwriting File...\n");
+            extracted_fp = fopen(name_var, "w");
+        }
+        else {
+            return;
+        }
+    }
+    else { // file does not exist, just create it
+        extracted_fp = fopen(name_var, "w");
+    }
 
     printf("PUTTING CONTENTS IN FILE\n");
     // Write the contents into the extraction
-    fputs(contents, extracted_fp);
+    fwrite(contents, sizeof(char), size_var, extracted_fp);
 
     printf("CLOSING THE FILE\n");
     // Finished extracting - Close the file
     fclose(extracted_fp);
+
+    printf("CHANGING FILE PERMISSION\n");
+    chmod(name_var, file_mode);
 
 }
 
@@ -196,6 +227,7 @@ int main (int argc, char* argv[]) {
     char fileName[256];
     uint64_t fileSize;
     uint8_t fileDeleted;
+    uint32_t fileMode;
     int seekEnd = 0;
 
 
@@ -252,18 +284,18 @@ int main (int argc, char* argv[]) {
 
                     readName(fileName, fp);
                     printf("file name is: %s\n", fileName);
+
                     readSize(&fileSize, fp);
                     printf("File size is: %"PRIu64"\n", fileSize);
+
                     readExists(&fileDeleted, fp);
                     printf("File exists? %"PRIu8"\n", fileDeleted);
 
-                    // skip the mode for now
-                    fseek(fp, 4, SEEK_CUR);
-
+                    readMode(&fileMode, fp);
 
                     // extract the file
                     if (fileDeleted == 0) {
-                        extractFile(fileName, fileSize, fp);
+                        extractFile(fileName, fileSize, fileMode, fp);
                     }
                     else {
                         // if the file is to be deleted, skip ahead
