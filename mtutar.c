@@ -22,6 +22,7 @@
 #define FILENAME "example.mtu"
 
 int READMAGIC = 0;
+char *fileContents;
 
 int checkMagicBytes (FILE *fp) {
 
@@ -87,11 +88,11 @@ void readSize(uint64_t *size_var, FILE *fp) { // pass in a pointer or return an 
  * if the byte says the file is to be deleted or stay
  * Returns 1 if the file exists, 0 otherwise
  */
-void readExists(uint8_t *exists_var, FILE *fp) { // pass in a pointer or return an array??
+void readExists(uint8_t *deleted_var, FILE *fp) { // pass in a pointer or return an array??
 
     int readCheck = 0;
 
-    readCheck = fread(exists_var, sizeof(char), 1, fp);
+    readCheck = fread(deleted_var, sizeof(char), 1, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
         fclose(fp);
@@ -119,6 +120,74 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
     return;
 }
 
+/*
+ * Method to extract the next file, if the file already exists, then the program
+ * should prompt to overwrite. Expects that the file is to be extracted
+ */
+void extractFile(char name_var[static 256], uint64_t size_var, FILE *fp) {
+
+    int readCheck;
+    char contents[size_var];
+    FILE * extracted_fp;
+
+    // Read in the contents of the file
+    readCheck = fread(contents, sizeof(char), size_var, fp);
+    if (readCheck < 1) {
+        printf("An error occured while reading - Exiting\n");
+        fclose(fp);
+        exit(1);
+    }
+
+
+    printf("OPENING FILE\n");
+    // Create the destination to extract the file
+    extracted_fp = fopen(name_var, "w");
+
+    printf("PUTTING CONTENTS IN FILE\n");
+    // Write the contents into the extraction
+    fputs(contents, extracted_fp);
+
+    printf("CLOSING THE FILE\n");
+    // Finished extracting - Close the file
+    fclose(extracted_fp);
+
+}
+
+/*
+ * Method used to print the help information if the user provides
+ * incorrect or unexpected input
+ */
+void printHelp(void) {
+
+
+    printf("mtutar - a program used to create, update, and extract archive files.\n");
+    printf("Author: Zachary Hill\n");
+    printf("Date last updated: Feburary 7th, 2016\n\n");
+
+    printf("USAGE:\n");
+    printf("    mtutar                              Print this help information\n\n");
+
+    printf("    mtutar -a archive.mtu file1 file2   Appends one or more files into a file named archive.mtu.\n"
+           "                                        If the archive file doesn't exist, create it. The same file\n"
+           "                                        (with the same filename) could be added to the same archive\n"
+           "                                        multiple times.\n\n");
+
+    printf("    mtutar -d archive.mtu file1         Deletes a single file (file1) from the archive. Program exits with\n"
+           "                                        a non-zero return code and prints a message if the archive doesn't\n"
+           "                                        exist or if the file that the user is trying to delete does not\n"
+           "                                        exist in the archive. If there are multiple files in the archive\n"
+           "                                        with the same name, all of them with a name that matches the file\n"
+           "                                        that the user requested to be deleted should be deleted.\n\n");
+
+    printf("    mtutar -x archive.mtu               Extracts the files from archive.mtu into the current directory.\n"
+           "                                        If a file that is going to be extracted already exists, the user\n"
+           "                                        is asked if they would like to overwrite the existing file. If the\n"
+           "                                        archive can't be read or if the extracted files can't be written,\n"
+           "                                        the program should exit with a non-zero return code and print an error message.\n");
+
+}
+
+
 
 int main (int argc, char* argv[]) {
 
@@ -126,7 +195,9 @@ int main (int argc, char* argv[]) {
     // int readcheck = 0;
     char fileName[256];
     uint64_t fileSize;
+    uint8_t fileDeleted;
     int seekEnd = 0;
+
 
     if (argc == 0) {
         //print help stuff
@@ -183,10 +254,22 @@ int main (int argc, char* argv[]) {
                     printf("file name is: %s\n", fileName);
                     readSize(&fileSize, fp);
                     printf("File size is: %"PRIu64"\n", fileSize);
+                    readExists(&fileDeleted, fp);
+                    printf("File exists? %"PRIu8"\n", fileDeleted);
 
-                    // seek forward to skip reading the data - TEMPORARY
-                    // remember to skip extra five for deleted and mode
-                    fseek(fp, fileSize + 5, SEEK_CUR);
+                    // skip the mode for now
+                    fseek(fp, 4, SEEK_CUR);
+
+
+                    // extract the file
+                    if (fileDeleted == 0) {
+                        extractFile(fileName, fileSize, fp);
+                    }
+                    else {
+                        // if the file is to be deleted, skip ahead
+                        printf("FILE: %s is to be deleted, skipping extraction\n", fileName);
+                        fseek(fp, fileSize, SEEK_CUR);
+                    }
 
                 }
 
@@ -200,12 +283,12 @@ int main (int argc, char* argv[]) {
 
         case('?'): // Some option not expected from opt
             // print help
-            printf("HELP STUFF\n");
+            printHelp();
             break;
 
         default:
             // print help
-            printf("HELP STUFF\n");
+            printHelp();
             break;
     }
 
@@ -218,5 +301,6 @@ int main (int argc, char* argv[]) {
  *  http://stackoverflow.com/questions/579734/assigning-strings-to-arrays-of-characters
  *  http://www.programmingsimplified.com/c/program/print-string
  *  http://www.thegeekstuff.com/2013/01/c-argc-argv/
+ *  http://stackoverflow.com/questions/16523239/c-finding-end-of-file-before-reading
  *  http://stackoverflow.com/questions/5573310/difference-between-passing-array-and-array-pointer-into-function-in-c
  */
