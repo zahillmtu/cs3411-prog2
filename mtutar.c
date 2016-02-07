@@ -11,6 +11,8 @@
  * extract an archive file
  */
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -124,11 +126,9 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
 void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mode, FILE *fp) {
 
     int readCheck;
-    int inputCheck;
     char contents[size_var];
     FILE * extracted_fp;
     char * userAns = NULL;
-    char secondChar;
 
     // Read in the contents of the file
     readCheck = fread(contents, sizeof(char), size_var, fp);
@@ -147,7 +147,7 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
         // Read in user input
         getline(&userAns, 0, stdin);
 
-        if (userAns == "y\n" || userAns == "Y\n") {
+        if (strcmp(userAns, "y\n") == 0 || strcmp(userAns, "Y\n") == 0) {
             // Overwrite the file
             printf("Overwriting File...\n");
             extracted_fp = fopen(name_var, "w");
@@ -209,8 +209,8 @@ void printHelp(void) {
 int main (int argc, char* argv[]) {
 
     int opt;
-    int fileExists
-    int readcheck = 0;
+    int fileExists;
+    // int readcheck = 0;
     int indexIndicator = 3; // used to tell which cmd arg we are using
     int seekEnd = 0;
 
