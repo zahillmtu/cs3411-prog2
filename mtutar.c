@@ -28,7 +28,6 @@ int checkMagicBytes (FILE *fp) {
     char magicCheck[6] = "CS3411";
     char magicBytes[6];
 
-    printf("GOT TO THE MAGIC STUFF\n");
     readCheck = fread(&magicBytes, sizeof(char), 6, fp);
     printf("%s\n", magicBytes);
 
@@ -125,9 +124,10 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
 void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mode, FILE *fp) {
 
     int readCheck;
+    int inputCheck;
     char contents[size_var];
     FILE * extracted_fp;
-    char userAns;
+    char * userAns = NULL;
     char secondChar;
 
     // Read in the contents of the file
@@ -138,27 +138,16 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
         exit(1);
     }
 
-
-    printf("OPENING FILE\n");
-
     // Check if the file exists
     if (access(name_var, F_OK) == 0) {
 
         // File exists, ask to overwrite
         printf("File '%s' exists. Overwite it? [y/n]\n", name_var);
 
-        // flush stdin so that a newline char is not picked up
-        fseek(stdin, 0, SEEK_END);
         // Read in user input
-        userAns = getchar();
+        getline(&userAns, 0, stdin);
 
-        // Read in second char to make sure that there is only one char
-        secondChar = getchar();
-        if (secondChar != '\n') {
-            return;
-        }
-
-        if (userAns == 'y' || userAns == 'Y') {
+        if (userAns == "y\n" || userAns == "Y\n") {
             // Overwrite the file
             printf("Overwriting File...\n");
             extracted_fp = fopen(name_var, "w");
@@ -171,15 +160,12 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
         extracted_fp = fopen(name_var, "w");
     }
 
-    printf("PUTTING CONTENTS IN FILE\n");
     // Write the contents into the extraction
     fwrite(contents, sizeof(char), size_var, extracted_fp);
 
-    printf("CLOSING THE FILE\n");
     // Finished extracting - Close the file
     fclose(extracted_fp);
 
-    printf("CHANGING FILE PERMISSION\n");
     chmod(name_var, file_mode);
 
 }
@@ -223,13 +209,17 @@ void printHelp(void) {
 int main (int argc, char* argv[]) {
 
     int opt;
-    // int readcheck = 0;
+    int fileExists
+    int readcheck = 0;
+    int indexIndicator = 3; // used to tell which cmd arg we are using
+    int seekEnd = 0;
+
     char fileName[256];
     uint64_t fileSize;
     uint8_t fileDeleted;
     uint32_t fileMode;
-    int seekEnd = 0;
 
+    char magicCheck[6] = "CS3411";
 
     if (argc == 0) {
         //print help stuff
@@ -240,9 +230,49 @@ int main (int argc, char* argv[]) {
     opt = getopt(argc, argv, "a:d:x:");
 
     switch (opt) {
-        case('a'):
+        case('a'): // append the archive file
 
-            printf("This is the case 'a'\n");
+            // check if the file exists
+            if (access(argv[2], W_OK) == 0) {
+                fileExists = 1;
+            }
+            else {
+                fileExists = 0;
+            }
+
+            // open the file for ammending
+            FILE *fp = fopen(argv[2], "a");
+            if (fp == NULL) {
+                    perror("fopen");
+                    exit(1);
+            }
+
+            // if the file did not exist, write magic bytes
+            if (fileExists == 0) {
+                fwrite(magicCheck, sizeof(char), 6, fp);
+            }
+            else { // check for magic bytes
+                if (READMAGIC == 0) {
+                    if (checkMagicBytes(fp) == 0) {
+                        printf("Valid .mtu file\n");
+                    }
+                    else {
+                        printf("Not a valid .mtu file - Exiting\n");
+                        exit(1);
+                    }
+                }
+            }
+
+            while (indexIndicator < argc) {
+
+                // write header
+
+                // write file contents
+
+                indexIndicator = indexIndicator + 1;
+            }
+
+
             break;
         case('d'):
 
@@ -250,10 +280,6 @@ int main (int argc, char* argv[]) {
             break;
         case('x'):
             // check if the archive file exists
-            if (argv[2] == NULL) {
-                printf("Archive file does not exist - Exiting\n");
-                exit(1);
-            }
             if (access(argv[2], R_OK) == 0) {
                 // File exists and can read
                 printf("File Exists\n");
@@ -269,7 +295,6 @@ int main (int argc, char* argv[]) {
                 // Return the cursor to the beginning of file
                 fseek(fp, 0, SEEK_SET);
 
-                printf("GOT HERE\n");
                 if (READMAGIC == 0) {
                     if (checkMagicBytes(fp) == 0) {
                         printf("Valid .mtu file\n");
