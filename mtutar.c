@@ -244,9 +244,12 @@ int main (int argc, char* argv[]) {
     uint32_t fileMode;
 
     struct stat fileStruct;
-    char deletedByte = 0;
+    char deletedByte = 0; // used to test if a file is supposed to be deleted
+    char deletionByte = 0x01; // used to set a file deletion byte
 
     char magicCheck[6] = "CS3411";
+
+    FILE *fp;
 
     if (argc == 0) {
         //print help stuff
@@ -267,10 +270,12 @@ int main (int argc, char* argv[]) {
             else {
                 fileExists = 0;
                 printf("Archive file '%s' does not exist - Creating file\n", argv[2]);
+                fp = fopen(argv[2], "w");
+                fclose(fp);
             }
 
             // open the file for ammending
-            FILE *fp = fopen(argv[2], "a+");
+            fp = fopen(argv[2], "a+");
             if (fp == NULL) {
                     perror("fopen");
                     exit(1);
@@ -280,11 +285,13 @@ int main (int argc, char* argv[]) {
             if (fileExists == 0) {
                 fwrite(magicCheck, sizeof(char), 6, fp);
             }
-
             else { // check for magic bytes
                 if (READMAGIC == 0) {
-                    if (checkMagicBytes(fp) == 0) { // trying to read when opened to write
+                    fseek(fp, 0, SEEK_SET); // get to the beginning of file to check bits
+                    if (checkMagicBytes(fp) == 0) {
                         printf("Valid .mtu file\n");
+                        fseek(fp, 0L, SEEK_CUR); // call this whenever switching between reading and writing
+                        fseek(fp, 0, SEEK_END); // go to the end of file to add new files
                     }
                     else {
                         printf("Not a valid .mtu file - Exiting\n");
@@ -327,14 +334,77 @@ int main (int argc, char* argv[]) {
                 fwrite(contents, sizeof(char), fileStruct.st_size, fp);
 
                 indexIndicator = indexIndicator + 1;
+
+                fclose(addedFile);
             }
 
             fclose(fp);
 
             break;
-        case('d'):
+        case('d'): // Delete a file in the archive file
 
-            printf("This is the case 'd'\n");
+            // check if the file exists
+            if (access(argv[2], W_OK) != 0) {
+                printf("Archive file '%s' is not reachable\n", argv[2]);
+                exit(1);
+            }
+
+            // open the file for ammending
+            fp = fopen(argv[2], "r+");
+            if (fp == NULL) {
+                    perror("fopen");
+                    exit(1);
+            }
+
+            // Seek to the end of file and store value to find EOF
+            fseek(fp, 0, SEEK_END);
+            seekEnd = ftell(fp);
+            // Return the cursor to the beginning of file
+            fseek(fp, 0, SEEK_SET);
+
+
+            // Check that it is a valid .mtu file
+            if (checkMagicBytes(fp) == 0) {
+                printf("Valid .mtu file\n");
+            }
+            else {
+                printf("Not a valid .mtu file - Exiting\n");
+                exit(1);
+            }
+
+            // Look through the file to find all cmd args
+
+            for (indexIndicator = 3; indexIndicator < argc; indexIndicator++) {
+
+                while (ftell(fp) < seekEnd) { // Find all instances of argv
+
+                    // Read the name to determine if correct file
+                    readName(fileName, fp);
+                    readSize(&fileSize, fp);
+
+                    if (strcmp(argv[indexIndicator], fileName) == 0) {
+
+                        fseek(fp, 0L, SEEK_CUR); // Call this whenever switching between reading and writing
+
+                        // write the deleted byte
+                        fwrite(&deletionByte, sizeof(char), 1, fp);
+
+                        fseek(fp, 0L, SEEK_CUR); // Call this whenever switching between reading and writing
+
+                    }
+                    else { // skip the deleted byte
+                        fseek(fp, 1, SEEK_CUR);
+                    }
+
+                    // skip the mode and data
+                    fseek(fp, fileSize + 4, SEEK_CUR);
+
+                }
+
+            }
+
+            fclose(fp);
+
             break;
         case('x'):
             // check if the archive file exists
@@ -387,6 +457,8 @@ int main (int argc, char* argv[]) {
                     }
 
                 }
+
+                fclose(fp);
 
             }
             else {
