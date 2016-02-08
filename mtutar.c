@@ -11,8 +11,6 @@
  * extract an archive file
  */
 
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +18,9 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <libgen.h>
 
 int READMAGIC = 0;
 
@@ -128,7 +128,7 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
     int readCheck;
     char contents[size_var];
     FILE * extracted_fp;
-    char * userAns = NULL;
+    char userAns[256];
 
     // Read in the contents of the file
     readCheck = fread(contents, sizeof(char), size_var, fp);
@@ -145,15 +145,17 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
         printf("File '%s' exists. Overwite it? [y/n]\n", name_var);
 
         // Read in user input
-        getline(&userAns, 0, stdin);
 
-        if (strcmp(userAns, "y\n") == 0 || strcmp(userAns, "Y\n") == 0) {
-            // Overwrite the file
-            printf("Overwriting File...\n");
-            extracted_fp = fopen(name_var, "w");
-        }
-        else {
-            return;
+        if (fgets(userAns, 256, stdin) != NULL) {
+
+            if (strcmp(userAns, "y\n") == 0 || strcmp(userAns, "Y\n") == 0) {
+                // Overwrite the file
+                printf("Overwriting File...\n");
+                extracted_fp = fopen(name_var, "w");
+            }
+            else {
+                return;
+            }
         }
     }
     else { // file does not exist, just create it
@@ -167,6 +169,28 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
     fclose(extracted_fp);
 
     chmod(name_var, file_mode);
+
+}
+
+/*
+ * Writes all the contents of the header to the file given
+ * This method assumes file has writing permissions
+ */
+void writeHeader(char name[static 256], uint64_t size, uint8_t deleted, uint32_t mode, FILE *fp) {
+
+    // Write name
+    fwrite(name, sizeof(char), 256, fp);
+
+    // write size
+    fwrite(&size, sizeof(char), 8, fp);
+
+    // write deleted byte
+    fwrite(&deleted, sizeof(char), 1, fp);
+
+    // write mode
+    fwrite(&mode, sizeof(char), 4, fp);
+
+    return;
 
 }
 
@@ -219,6 +243,9 @@ int main (int argc, char* argv[]) {
     uint8_t fileDeleted;
     uint32_t fileMode;
 
+    struct stat fileStruct;
+    char deletedByte = 0;
+
     char magicCheck[6] = "CS3411";
 
     if (argc == 0) {
@@ -235,13 +262,15 @@ int main (int argc, char* argv[]) {
             // check if the file exists
             if (access(argv[2], W_OK) == 0) {
                 fileExists = 1;
+                printf("Archive file '%s' already exists\n", argv[2]);
             }
             else {
                 fileExists = 0;
+                printf("Archive file '%s' does not exist - Creating file\n", argv[2]);
             }
 
             // open the file for ammending
-            FILE *fp = fopen(argv[2], "a");
+            FILE *fp = fopen(argv[2], "a+");
             if (fp == NULL) {
                     perror("fopen");
                     exit(1);
@@ -251,9 +280,10 @@ int main (int argc, char* argv[]) {
             if (fileExists == 0) {
                 fwrite(magicCheck, sizeof(char), 6, fp);
             }
+
             else { // check for magic bytes
                 if (READMAGIC == 0) {
-                    if (checkMagicBytes(fp) == 0) {
+                    if (checkMagicBytes(fp) == 0) { // trying to read when opened to write
                         printf("Valid .mtu file\n");
                     }
                     else {
@@ -265,13 +295,41 @@ int main (int argc, char* argv[]) {
 
             while (indexIndicator < argc) {
 
-                // write header
+                deletedByte = 0;
+
+                // Check if the file exists and can read from it
+                if (access(argv[indexIndicator], R_OK) != 0) {
+                    printf("File '%s' is not reachable - Exiting", argv[indexIndicator]);
+                    exit(1);
+                }
+
+                // Find file name, size, and mode_t
+                // create struct for file information
+                // use fileStruct.st_size for size data
+                // use fileStruct.st_mode for mode data
+                stat(argv[indexIndicator], &fileStruct);
+
+                // Find file contents
+                FILE *addedFile = fopen(argv[indexIndicator], "r");
+                if (addedFile == NULL) {
+                    perror("fopen");
+                    exit(1);
+                }
+                char contents[fileStruct.st_size];
+                fread(contents, sizeof(char), fileStruct.st_size, addedFile);
+
+
+                // write header but use basename before writing
+                strcpy(fileName, basename(argv[indexIndicator]));
+                writeHeader(fileName, fileStruct.st_size, deletedByte, fileStruct.st_mode, fp);
 
                 // write file contents
+                fwrite(contents, sizeof(char), fileStruct.st_size, fp);
 
                 indexIndicator = indexIndicator + 1;
             }
 
+            fclose(fp);
 
             break;
         case('d'):
@@ -341,7 +399,7 @@ int main (int argc, char* argv[]) {
         case('?'): // Some option not expected from opt
             // print help
             printHelp();
-            break;
+            exit(1);
 
         default:
             // print help
