@@ -121,6 +121,7 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
 void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mode, FILE *fp) {
 
     int readCheck;
+    uint64_t writeCheck;
     char contents[size_var];
     FILE * extracted_fp;
     char userAns[256];
@@ -168,7 +169,11 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
     }
 
     // Write the contents into the extraction
-    fwrite(contents, sizeof(char), size_var, extracted_fp);
+    writeCheck = fwrite(contents, sizeof(char), size_var, extracted_fp);
+    if (writeCheck != size_var) {
+        printf("An error occured while writing - Exiting\n");
+        exit(1);
+    }
 
     // Finished extracting - Close the file
     fclose(extracted_fp);
@@ -183,17 +188,35 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
  */
 void writeHeader(char name[static 256], uint64_t size, uint8_t deleted, uint32_t mode, FILE *fp) {
 
+    int writeCheck = 0;
+
     // Write name
-    fwrite(name, sizeof(char), 256, fp);
+    writeCheck = fwrite(name, sizeof(char), 256, fp);
+    if (writeCheck != 256) {
+        printf("An error occured while writing - Exiting\n");
+        exit(1);
+    }
 
     // write size
-    fwrite(&size, sizeof(char), 8, fp);
+    writeCheck = fwrite(&size, sizeof(char), 8, fp);
+    if (writeCheck != 8) {
+        printf("An error occured while writing - Exiting\n");
+        exit(1);
+    }
 
     // write deleted byte
-    fwrite(&deleted, sizeof(char), 1, fp);
+    writeCheck = fwrite(&deleted, sizeof(char), 1, fp);
+    if (writeCheck != 1) {
+        printf("An error occured while writing - Exiting\n");
+        exit(1);
+    }
 
     // write mode
-    fwrite(&mode, sizeof(char), 4, fp);
+    writeCheck = fwrite(&mode, sizeof(char), 4, fp);
+    if (writeCheck != 4) {
+        printf("An error occured while writing - Exiting\n");
+        exit(1);
+    }
 
     return;
 
@@ -240,6 +263,7 @@ int main (int argc, char* argv[]) {
     int opt;
     int fileExists;
     int readCheck = 0;
+    int writeCheck = 0;
     int indexIndicator = 3; // used to tell which cmd arg we are using
     int seekEnd = 0;
 
@@ -282,7 +306,7 @@ int main (int argc, char* argv[]) {
         case('a'): // append the archive file
 
             // check if the file exists
-            if (access(argv[2], F_OK == 0)) {
+            if (access(argv[2], F_OK) == 0) {
                 fileExists = 1;
                 printf("Archive file '%s' already exists\n", argv[2]);
             }
@@ -297,14 +321,6 @@ int main (int argc, char* argv[]) {
                 fclose(fp);
             }
 
-            // check if the file is writable if it exists
-            if (fileExists) {
-                if (access(argv[2], W_OK) != 0) {
-                    printf("Archive file '%s' has invalid permissions\n", argv[2]);
-                    exit(1);
-                }
-            }
-
             // open the file for ammending
             fp = fopen(argv[2], "a+");
             if (fp == NULL) {
@@ -314,7 +330,11 @@ int main (int argc, char* argv[]) {
 
             // if the file did not exist, write magic bytes
             if (fileExists == 0) {
-                fwrite(magicCheck, sizeof(char), 6, fp);
+                writeCheck = fwrite(magicCheck, sizeof(char), 6, fp);
+                if (writeCheck != 6) {
+                    printf("An error occured while writing - Exiting\n");
+                    exit(1);
+                }
             }
             else { // check for magic bytes
                 if (READMAGIC == 0) {
@@ -334,12 +354,6 @@ int main (int argc, char* argv[]) {
             while (indexIndicator < argc) {
 
                 deletedByte = 0;
-
-                // Check if the file exists and can read from it
-                if (access(argv[indexIndicator], R_OK) != 0) {
-                    printf("File '%s' is not reachable - Exiting", argv[indexIndicator]);
-                    exit(1);
-                }
 
                 // Find file name, size, and mode_t
                 // create struct for file information
@@ -367,7 +381,11 @@ int main (int argc, char* argv[]) {
                 writeHeader(fileName, fileStruct.st_size, deletedByte, fileStruct.st_mode, fp);
 
                 // write file contents
-                fwrite(contents, sizeof(char), fileStruct.st_size, fp);
+                writeCheck = fwrite(contents, sizeof(char), fileStruct.st_size, fp);
+                if (writeCheck != fileStruct.st_size) {
+                    printf("An error occured while writing - Exiting\n");
+                    exit(1);
+                }
 
                 indexIndicator = indexIndicator + 1;
 
@@ -423,7 +441,11 @@ int main (int argc, char* argv[]) {
                         fseek(fp, 0L, SEEK_CUR); // Call this whenever switching between reading and writing
 
                         // write the deleted byte
-                        fwrite(&deletionByte, sizeof(char), 1, fp);
+                        writeCheck = fwrite(&deletionByte, sizeof(char), 1, fp);
+                        if (writeCheck != 1) {
+                           printf("An error occured while writing - Exiting\n");
+                           exit(1);
+                        }
 
                         fseek(fp, 0L, SEEK_CUR); // Call this whenever switching between reading and writing
 
