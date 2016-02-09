@@ -122,6 +122,7 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
 /*
  * Method to extract the next file, if the file already exists, then the program
  * should prompt to overwrite. Expects that the file is to be extracted
+ *
  */
 void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mode, FILE *fp) {
 
@@ -152,6 +153,10 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
                 // Overwrite the file
                 printf("Overwriting File...\n");
                 extracted_fp = fopen(name_var, "w");
+                if (extracted_fp == NULL) {
+                    perror("fopen");
+                    exit(1);
+                }
             }
             else {
                 return;
@@ -160,6 +165,10 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
     }
     else { // file does not exist, just create it
         extracted_fp = fopen(name_var, "w");
+        if (extracted_fp == NULL) {
+            perror("fopen");
+            exit(1);
+        }
     }
 
     // Write the contents into the extraction
@@ -237,7 +246,6 @@ int main (int argc, char* argv[]) {
     // int readcheck = 0;
     int indexIndicator = 3; // used to tell which cmd arg we are using
     int seekEnd = 0;
-    //char dir[1] = ".";
 
     char fileName[256];
     uint64_t fileSize;
@@ -251,14 +259,6 @@ int main (int argc, char* argv[]) {
     char magicCheck[6] = "CS3411";
 
     FILE *fp;
-
-    //struct stat dirStruct;
-
-    //stat(dir, &dirStruct);
-    //if (!S_ISDIR(dirStruct.st_mode)) {
-    //    printf("Invalid directory permissions - Exiting\n");
-    //    exit(1);
-    //}
 
     if (argc == 0) {
         //print help stuff
@@ -294,6 +294,10 @@ int main (int argc, char* argv[]) {
                 fileExists = 0;
                 printf("Archive file '%s' does not exist - Creating file\n", argv[2]);
                 fp = fopen(argv[2], "w");
+                if (fp == NULL) {
+                        perror("fopen");
+                        exit(1);
+                }
                 fclose(fp);
             }
 
