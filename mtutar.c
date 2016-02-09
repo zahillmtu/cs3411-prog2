@@ -286,7 +286,7 @@ int main (int argc, char* argv[]) {
         case('a'): // append the archive file
 
             // check if the file exists
-            if (access(argv[2], W_OK) == 0) {
+            if (access(argv[2], F_OK == 0)) {
                 fileExists = 1;
                 printf("Archive file '%s' already exists\n", argv[2]);
             }
@@ -295,6 +295,14 @@ int main (int argc, char* argv[]) {
                 printf("Archive file '%s' does not exist - Creating file\n", argv[2]);
                 fp = fopen(argv[2], "w");
                 fclose(fp);
+            }
+
+            // check if the file is writable if it exists
+            if (fileExists) {
+                if (access(argv[2], W_OK) != 0) {
+                    printf("Archive file '%s' has invalid permissions\n", argv[2]);
+                    exit(1);
+                }
             }
 
             // open the file for ammending
