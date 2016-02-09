@@ -237,6 +237,7 @@ int main (int argc, char* argv[]) {
     // int readcheck = 0;
     int indexIndicator = 3; // used to tell which cmd arg we are using
     int seekEnd = 0;
+    //char dir[1] = ".";
 
     char fileName[256];
     uint64_t fileSize;
@@ -251,6 +252,14 @@ int main (int argc, char* argv[]) {
 
     FILE *fp;
 
+    //struct stat dirStruct;
+
+    //stat(dir, &dirStruct);
+    //if (!S_ISDIR(dirStruct.st_mode)) {
+    //    printf("Invalid directory permissions - Exiting\n");
+    //    exit(1);
+    //}
+
     if (argc == 0) {
         //print help stuff
         printf("HELP STUFF\n");
@@ -258,6 +267,20 @@ int main (int argc, char* argv[]) {
 
     // use to parse options on command line
     opt = getopt(argc, argv, "a:d:x:");
+
+    // Check to make sure the option is of valid format
+    if (optarg != 0) {
+        if (argc < 3) { // Not enough args to be vaild
+            printf("Invalid Argument Option - Exiting\n\n");
+            printHelp();
+            exit(1);
+        }
+        if(strcmp(optarg, argv[2]) != 0) { // picking up attached args
+            printf("Invalid Argument Option - Exiting\n\n");
+            printHelp();
+            exit(1);
+        }
+    }
 
     switch (opt) {
         case('a'): // append the archive file
