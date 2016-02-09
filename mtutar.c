@@ -27,11 +27,10 @@ int READMAGIC = 0;
 int checkMagicBytes (FILE *fp) {
 
     int readCheck = 0;
-    char magicCheck[6] = "CS3411";
-    char magicBytes[6];
+    char magicCheck[7] = "CS3411";
+    char magicBytes[7] = "NOT_OK";
 
     readCheck = fread(&magicBytes, sizeof(char), 6, fp);
-    printf("%s\n", magicBytes);
 
     // check to make sure the file was read properly
     if (readCheck < 1) {
@@ -161,6 +160,9 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
             else {
                 return;
             }
+        }
+        else {
+            return;
         }
     }
     else { // file does not exist, just create it
