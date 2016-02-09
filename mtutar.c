@@ -35,7 +35,6 @@ int checkMagicBytes (FILE *fp) {
     // check to make sure the file was read properly
     if (readCheck < 1) {
         printf("An error occured while Reading - Exiting\n");
-        fclose(fp);
         exit(EXIT_FAILURE);
     }
 
@@ -56,7 +55,6 @@ void readName(char name_var[static 265], FILE *fp) {
     readCheck = fread(name_var, sizeof(char), 256, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
-        fclose(fp);
         exit(1);
     }
 
@@ -74,7 +72,6 @@ void readSize(uint64_t *size_var, FILE *fp) { // pass in a pointer or return an 
     readCheck = fread(size_var, sizeof(char), 8, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
-        fclose(fp);
         exit(1);
     }
 
@@ -93,7 +90,6 @@ void readExists(uint8_t *deleted_var, FILE *fp) { // pass in a pointer or return
     readCheck = fread(deleted_var, sizeof(char), 1, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
-        fclose(fp);
         exit(1);
     }
 
@@ -111,7 +107,6 @@ void readMode(uint32_t *mode_var, FILE *fp) { // pass in a pointer or return an 
     readCheck = fread(mode_var, sizeof(char), 4, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
-        fclose(fp);
         exit(1);
     }
 
@@ -134,7 +129,6 @@ void extractFile(char name_var[static 256], uint64_t size_var, uint32_t file_mod
     readCheck = fread(contents, sizeof(char), size_var, fp);
     if (readCheck < 1) {
         printf("An error occured while reading - Exiting\n");
-        fclose(fp);
         exit(1);
     }
 
@@ -245,7 +239,7 @@ int main (int argc, char* argv[]) {
 
     int opt;
     int fileExists;
-    // int readcheck = 0;
+    int readCheck = 0;
     int indexIndicator = 3; // used to tell which cmd arg we are using
     int seekEnd = 0;
 
@@ -360,7 +354,12 @@ int main (int argc, char* argv[]) {
                     exit(1);
                 }
                 char contents[fileStruct.st_size];
-                fread(contents, sizeof(char), fileStruct.st_size, addedFile);
+
+                readCheck = fread(contents, sizeof(char), fileStruct.st_size, addedFile);
+                if (readCheck < 0) {
+                    printf("An error occured while reading - Exiting\n");
+                    exit(1);
+                }
 
 
                 // write header but use basename before writing
